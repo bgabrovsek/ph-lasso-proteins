@@ -1,0 +1,5 @@
+ripser
+teaspoon
+wget
+bs4
+bio
