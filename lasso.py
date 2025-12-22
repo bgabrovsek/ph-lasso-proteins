@@ -67,7 +67,6 @@ class Lasso(dict):
         return bool(self.loop_missing + self.Ntail_missing + self.Ctail_missing)
 
     def get_coords(self):
-
         return self.Ntail, np.vstack([self.loop, (self.loop[0] + self.loop[-1]) / 2]), self.Ctail
 
     def get_atom_index(self, tail, aminoacid_number, atom_type="CA"):
@@ -129,6 +128,7 @@ class Lasso(dict):
 class LassoExtractor:
     """class for extracting all lassos from a protein (PDB) """
     def __init__(self, pdb):
+        #print('self.__init__() beg')
         #self.pdbs_folder = PDB_FOLDER  # global var
         self.pdb = pdb
         self.coords, self.cys_ndxes, self.chains = self.pdb2coords()
@@ -139,8 +139,11 @@ class LassoExtractor:
         # print(self.lassoprot_data.keys())
         # print(self.lassoprot_data.values())
 
+        #print('self.find_bridges()')
         self.bridges = self.find_bridges()
+        #print('self.get_lassos()')
         self.lassos = self.get_lassos()
+        #print('self.__init__() end')
 
     def get_lassos(self):
         lassos = defaultdict(list)
@@ -160,9 +163,9 @@ class LassoExtractor:
             #        therefore indexes are growing from left to right
             ndxes = (chain_endpoints[0]+cut_N//3, bridge[0], bridge[1], chain_endpoints[1]-cut_C//3)
 
-            DEBUG = False
+            #DEBUG = False
+            DEBUG = True
             if DEBUG:
-
                 if loop_missing:
                     print('Loop {:d}-{:d} of {}_{} is insane!'.format(ndxes[1], ndxes[2], self.pdb, chain))
                 if Ntail_missing:
@@ -240,17 +243,18 @@ class LassoExtractor:
 
     def download_pdb(self):
         try:
-            print(self.pdb.upper())
+            print('self.pdb.upper(): ', self.pdb.upper())
             url = 'https://files.rcsb.org/download/{}.pdb'.format(self.pdb.upper())
-            #print("Downloading from", url)
+            print("Downloading from", url)
             wget.download(url, out=str(PDB_FOLDER), bar=None)
         except:
             print(f"[[ problems with {self.pdb.upper()} ]]")
 
     def pdb2coords(self):
         # if locally file is not available, then download
-        file_path = PDB_FOLDER / (self.pdb.lower() + ".pdb")
+        file_path = PDB_FOLDER / (self.pdb.upper() + ".pdb")
         if not os.path.isfile(file_path):
+            print("pdb2coords()/download_pdb()")
             self.download_pdb()
         chain_atoms = ["CA","C","N"]
         bridge_atoms = ["CB","SG"]
@@ -264,9 +268,12 @@ class LassoExtractor:
             for line in f.readlines():
                 if line[:4] == 'ATOM':
                     atom = line[13:16].strip()
+                    insertion_symbol = line[16]
                     resname = line[17:20].strip()
                     chain = line[21]
                     res_ndx = int(line[22:26])
+                    if not(insertion_symbol in [' ', 'A']):
+                        continue
                     if atom in chain_atoms:
                         pass
                     elif resname == 'CYS' and atom in bridge_atoms:
@@ -400,7 +407,7 @@ class LassoExtractorAF(LassoExtractor):
         #self.pdbs_folder = PDB_FOLDER  # global var
         self.pdb = uniprot_id # IT IS uniprot_id, but easier not to change name of self.pdb
         self.coords, self.cys_ndxes, self.chains = self.uniprot_id2coords()
-        #self.lassoprot_data = dict(self.get_alphalasso_info())
+        self.lassoprot_data = dict(self.get_alphalasso_info())
 
         # print("LASSO")
         # print(self.alphalasso_data)
@@ -413,17 +420,21 @@ class LassoExtractorAF(LassoExtractor):
     def download_AF(self):
         try:
             print(self.pdb.upper())
-            url = 'https://alphafold.ebi.ac.uk/files/AF-{}-F1-model_v4.cif'.format(self.pdb.upper())
-            #print("Downloading from", url)
+            url = 'https://alphafold.ebi.ac.uk/files/AF-{}-F1-model_v6.cif'.format(self.pdb.upper())
+            print("Downloading from", url)
             wget.download(url, out=str(CIF_FOLDER), bar=None)
         except:
             print(f"[[ problems with {self.pdb.upper()} ]]")
 
     def uniprot_id2coords(self):
         # if locally file is not available, then download
-        file_path = CIF_FOLDER / ('AF-' + self.pdb.upper() + "-F1-model_v4.cif")
+        file_path = CIF_FOLDER / ('AF-' + self.pdb.upper() + "-F1-model_v6.cif")
         if not os.path.isfile(file_path):
             self.download_AF()
+        # if still not available, return 0
+        if not os.path.isfile(file_path):
+            print(f"[[ {self.pdb.upper()} not available ]]")
+            raise FileNotFoundError
         chain_atoms = ["CA","C","N"]
         bridge_atoms = ["CB","SG"]
         chains = set([])
@@ -462,11 +473,8 @@ class LassoExtractorAF(LassoExtractor):
         pdb_id = self.pdb.upper()
         chain = "1"
         #file_path = 'lassoprot_data/{}.txt'.format(self.pdb.lower())
-        file_path = ALPHALASSO_FOLDER / '{}_{}.dat'.format(self.pdb.lower(), chain)
+        file_path = ALPHALASSO_FOLDER / '{}_{}.dat'.format(self.pdb.upper(), chain)
         if os.path.isfile(file_path):
-            # with open(file_path, 'r') as f:
-            #     print(literal_eval(f.read()))
-
             with open(file_path, 'r') as f:
                 loaded = literal_eval(f.read().strip())
                 # print(loaded)
@@ -477,10 +485,8 @@ class LassoExtractorAF(LassoExtractor):
             data = self.download_lasso_info(pdb_id)
             with open(file_path, 'w') as f:
                 f.write(str(dict(data)))
-
             # print(data)
             all_data[chain] = data
-
         return all_data
 
     @staticmethod
@@ -505,37 +511,34 @@ class LassoExtractorAF(LassoExtractor):
         #     print(str(x)[:10])
         # exit()
 
-        #TODO
-        for table in soup.find_all('table', attrs={"class": "table table-hover table-condensed"}):
+        for table in soup.find_all('table', attrs={"class": "table table-hover table-condensed text-center"}):
             # Find all rows within the table
             for row in table.find_all('tr')[1:]:
                 # Find all columns (cells) within the row
                 data = dict()
                 col = list(row.find_all(['td', 'th']))
-
-                data["range"] = tuple(int(x) for x in numbers(col[6]).split("-"))
+                data["range"] = tuple(int(x) for x in numbers(col[10]).split("-"))
                 bridge = data["range"]
-                data["symbol"] = numbers(col[4],"LSNC").replace('--',"-")
+                data["symbol"] = numbers(col[5].find('span', attrs={"lassoSymbol"}),"LSNC").replace('--',"-")
                 try:
-                    data["area"] = int(numbers(col[12]))
+                    data["area"] = int(numbers(col[16]))
                 except:
                     data["area"] = 0
-
-                data["n-deep"] = col[8].find("div", attrs={"class": "toggleShallow withoutShallow"}).get_text(separator=' ')
+                data["n-deep"] = col[12].find("span", attrs={"class": "toggleShallow withoutShallow"}).get_text(separator=' ')
                 if len(data["n-deep"]) > 0:
                     data["n-deep"] = tuple(int(x) for x in data["n-deep"].split(","))
                 else: data["n-deep"] = tuple()
                 data["n-shallow"] = tuple()
-                for elem in col[8].find_all("span", attrs={"class": "shallow"}):
+                for elem in col[12].find_all("span", attrs={"class": "shallow"}):
                     shallow = elem.get_text(separator=' ')
                     data["n-shallow"] = data["n-shallow"] + (int(numbers(shallow)),)
 
-                data["c-deep"] = col[9].find("div", attrs={"class": "toggleShallow withoutShallow"}).get_text(separator=' ')
+                data["c-deep"] = col[13].find("span", attrs={"class": "toggleShallow withoutShallow"}).get_text(separator=' ')
                 if len(data["c-deep"]) > 0:
                     data["c-deep"] = tuple(int(x) for x in data["c-deep"].split(","))
                 else: data["c-deep"] = tuple()
                 data["c-shallow"] = tuple()
-                for elem in col[9].find_all("span", attrs={"class": "shallow"}):
+                for elem in col[13].find_all("span", attrs={"class": "shallow"}):
                     shallow = elem.get_text(separator=' ')
                     data["c-shallow"] = data["c-shallow"] + (int(numbers(shallow)),)
 
@@ -575,7 +578,6 @@ def all_lasso_iterator(max_lassos=None, include_trivial=False, include_shallow=F
     max_lassos = max_lassos or 10000000
 
     exclude_pdbs = ["4BH4", "8AVB", "3RME", "3WHE"]
-
     exclude_pdbs = exclude_pdbs or set()
     exclude_pdbs = {s.upper() for s in exclude_pdbs}
 
@@ -584,23 +586,18 @@ def all_lasso_iterator(max_lassos=None, include_trivial=False, include_shallow=F
         wget.download('https://lassoprot.cent.uw.edu.pl/lasso.txt', out=str(DATA_FOLDER / "lasso.txt"))
         print("File lasso.txt downloaded from LassoProt")
 
-
     with open(DATA_FOLDER / "lasso.txt", "r") as f:
         pdb_chain = [tuple(l.strip().split(" ")) for l in f.readlines()]
 
     counter = 0
     for pdb_id, chain in pdb_chain:
-
         if pdb_starts_with is not None and not pdb_id.startswith(pdb_starts_with):
             continue
-
         if pdb_id.upper() in exclude_pdbs:
             continue
 
         #print("****** PDB CHAIN", pdb_id, chain, [lasso.lassoprot_data["symbol"] for lasso in LassoExtractor(pdb_id).lassos[chain]])
-
         for lasso in LassoExtractor(pdb_id).lassos[chain]:
-
             # sometimes there is an empty lasso data ?!
             if not bool(lasso.lassoprot_data):
                 continue
@@ -611,9 +608,7 @@ def all_lasso_iterator(max_lassos=None, include_trivial=False, include_shallow=F
                 continue
             if not include_shallow and len(deep_intersections) == 0 and len(shallow_intersections) != 0:
                 continue
-
             if (counter := counter + 1) > max_lassos: return
-
 
             yield _get_lasso_dict(lasso)
 
@@ -637,8 +632,11 @@ def _all_lasso_iterator_alphalasso(max_lassos=None, include_trivial=False, inclu
     exclude_uniprot_ids = {s.upper() for s in exclude_uniprot_ids}
 
     if not os.path.exists(DATA_FOLDER / "lassoAF.txt"):  # TODO: should overwrite if new data arrives to lassoprot
-        api_query = "browse?field=pLDDT_chain&val=>0&conj=NOT&field=Lasso_type&val=L0&raw=1&result_cols=Uniprot;pLDDT_chain;Bridge;Lasso_type"
+        print("Query sent")
+        api_query = f"browse?field=pLDDT_chain&val=>{min_plddt}&conj=NOT&field=Lasso_type&val=L0&raw=1&result_cols=Uniprot;pLDDT_chain;Bridge;Lasso_type"
+        full_query = f''
         wget.download(f'https://alphalasso.cent.uw.edu.pl/{api_query}', out=str(DATA_FOLDER / "lassoAF.txt"))
+        print("Downloaded")
 
     with open(DATA_FOLDER / "lassoAF.txt", "r") as f:
         f.readline()
@@ -656,7 +654,12 @@ def _all_lasso_iterator_alphalasso(max_lassos=None, include_trivial=False, inclu
         if float(plddt) < min_plddt:
             continue
 
-        for lasso in LassoExtractorAF(uniprot_id).lassos[chain]:
+        try:
+            extractor_object = LassoExtractorAF(uniprot_id)
+        except FileNotFoundError:
+            continue
+
+        for lasso in extractor_object.lassos[chain]:
             # sometimes there is an empty lasso data ?!
             if not bool(lasso.alphalasso_data):
                 continue
@@ -706,7 +709,7 @@ def _get_terminus_data(lasso, terminus):
 
 def print_lasso(d):
     print("[Lasso]", d["pdb"], d["chain"], d["bridge"], d["symbol"])
-    print("    xyz:", len(d["xyz"][0]), len(d["xyz"][1]), len(d["xyz"][2]))
+    print("    xyz:", len(d["xyz"]["n"]), len(d["xyz"]["loop"]), len(d["xyz"]["c"]))
     print(" deep N:", d["deep_n"], "shallow:", d["shallow_n"])
     print(" deep C:", d["deep_c"], "shallow:", d["shallow_c"])
 
@@ -714,8 +717,8 @@ def print_lasso(d):
 if __name__ == '__main__':
 
     # print first 3 lassos from lassoprot
-    for i, r in enumerate(_all_lasso_iterator(7, include_trivial=True)):
-        print_lasso(r)
+    #for i, r in enumerate(all_lasso_iterator(22, include_trivial=False)):
+    #    print_lasso(r)
     # print first 3 lassos from alphalasso
-    # for i, lasso in enumerate(_all_lasso_iterator_alphalasso(3)):
-    #     print(f"Lasso #{i}", lasso.pdb, lasso.chain, lasso.bridge, lasso.lassoprot_data["symbol"])
+    for i, lasso in enumerate(_all_lasso_iterator_alphalasso(3)):
+        print(f"Lasso #{i}", lasso.pdb, lasso.chain, lasso.bridge, lasso.lassoprot_data["symbol"])
