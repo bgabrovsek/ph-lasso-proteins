@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 from collections import defaultdict, Counter
 from pathlib import Path
 from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+from google.cloud import storage
 
 DATA_FOLDER = Path("data")
 PDB_FOLDER = DATA_FOLDER / "pdb"
@@ -417,20 +418,18 @@ class LassoExtractorAF(LassoExtractor):
         self.bridges = self.find_bridges()
         self.lassos = self.get_lassos()
 
-    def download_AF(self):
+    def download_AF(self, file_path):
         try:
             print(self.pdb.upper())
-            url = 'https://alphafold.ebi.ac.uk/files/AF-{}-F1-model_v6.cif'.format(self.pdb.upper())
-            print("Downloading from", url)
-            wget.download(url, out=str(CIF_FOLDER), bar=None)
+            self.download_v4_from_gcloud(self.pdb.upper(), file_path)
         except:
             print(f"[[ problems with {self.pdb.upper()} ]]")
 
     def uniprot_id2coords(self):
         # if locally file is not available, then download
-        file_path = CIF_FOLDER / ('AF-' + self.pdb.upper() + "-F1-model_v6.cif")
+        file_path = CIF_FOLDER / ('AF-' + self.pdb.upper() + "-F1-model_v4.cif")
         if not os.path.isfile(file_path):
-            self.download_AF()
+            self.download_AF(file_path)
         # if still not available, return 0
         if not os.path.isfile(file_path):
             print(f"[[ {self.pdb.upper()} not available ]]")
@@ -490,6 +489,30 @@ class LassoExtractorAF(LassoExtractor):
         return all_data
 
     @staticmethod
+    def download_v4_from_gcloud(uniprot_id, file_path):
+        """Downloads a blob from the bucket."""
+        # The ID of your GCS bucket
+        bucket_name = "public-datasets-deepmind-alphafold-v4"
+
+        # The ID of your GCS object
+        source_blob_name = f"AF-{uniprot_id}-F1-model_v4.cif"
+
+        # The path to which the file should be downloaded
+        destination_file_name = file_path
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+
+        # Construct a client side representation of a blob.
+        # Note `Bucket.blob` differs from `Bucket.get_blob` as it doesn't retrieve
+        # any content from Google Cloud Storage. As we don't need additional data,
+        # using `Bucket.blob` is preferred here.
+        blob = bucket.blob(source_blob_name)
+        blob.download_to_filename(file_path)
+
+        print("Downloaded storage object {} from bucket {} to local file {}.".format(
+              source_blob_name, bucket_name, file_path))
+
+    @staticmethod
     def download_lasso_info(uniprot_id):
         " download intersections with the minimal surface directly from the html of the lassoprot website"
         def numbers(s, k=""):
@@ -547,7 +570,6 @@ class LassoExtractorAF(LassoExtractor):
                 #print(data)
                 all_data[bridge] = data
         return all_data
-
 
 def _get_lasso_dict(lasso):
     tailN, loop, tailC = lasso.get_coords()
@@ -715,7 +737,6 @@ def print_lasso(d):
 
 
 if __name__ == '__main__':
-
     # print first 3 lassos from lassoprot
     #for i, r in enumerate(all_lasso_iterator(22, include_trivial=False)):
     #    print_lasso(r)

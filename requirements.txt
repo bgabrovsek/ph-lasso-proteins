@@ -3,3 +3,4 @@ teaspoon
 wget
 bs4
 bio
+google-cloud-storage
