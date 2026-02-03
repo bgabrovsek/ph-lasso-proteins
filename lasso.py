@@ -427,13 +427,32 @@ class LassoExtractorAF(LassoExtractor):
 
     def uniprot_id2coords(self):
         # if locally file is not available, then download
+
+
+        print("uniprot_id2coords")
+        file_path_dummy = CIF_FOLDER / ('AF-' + self.pdb.upper() + "-F1-model_v4_test.cif")
+
+        print("opening.")
+        f = open(file_path_dummy, 'w')
+        print("Writings to ", file_path_dummy)
+        f.write("Hello")
+        f.close()
+
+
         file_path = CIF_FOLDER / ('AF-' + self.pdb.upper() + "-F1-model_v4.cif")
+        print("File path:", file_path)
         if not os.path.isfile(file_path):
+            print("A")
             self.download_AF(file_path)
+            print("B")
         # if still not available, return 0
+        print("C")
         if not os.path.isfile(file_path):
+            print("X")
             print(f"[[ {self.pdb.upper()} not available ]]")
             raise FileNotFoundError
+        print("Y")
+
         chain_atoms = ["CA","C","N"]
         bridge_atoms = ["CB","SG"]
         chains = set([])
@@ -492,22 +511,44 @@ class LassoExtractorAF(LassoExtractor):
     def download_v4_from_gcloud(uniprot_id, file_path):
         """Downloads a blob from the bucket."""
         # The ID of your GCS bucket
+        print("a")
         bucket_name = "public-datasets-deepmind-alphafold-v4"
 
         # The ID of your GCS object
         source_blob_name = f"AF-{uniprot_id}-F1-model_v4.cif"
 
+        print("b")
+
         # The path to which the file should be downloaded
         destination_file_name = file_path
-        storage_client = storage.Client()
+        print("c")
+
+        from google.auth import default
+
+        creds, project = default()
+        print("Project:", project)
+
+        storage_client = storage.Client(credentials=creds, project=project)
+        print("Client created")
+
+        #storage_client = storage.Client()
+        print("d")
+
         bucket = storage_client.bucket(bucket_name)
+
+        print("e")
 
         # Construct a client side representation of a blob.
         # Note `Bucket.blob` differs from `Bucket.get_blob` as it doesn't retrieve
         # any content from Google Cloud Storage. As we don't need additional data,
         # using `Bucket.blob` is preferred here.
         blob = bucket.blob(source_blob_name)
+
+        print("f", file_path)
+
         blob.download_to_filename(file_path)
+
+        print("g")
 
         print("Downloaded storage object {} from bucket {} to local file {}.".format(
               source_blob_name, bucket_name, file_path))

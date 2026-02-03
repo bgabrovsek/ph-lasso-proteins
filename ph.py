@@ -15,7 +15,7 @@ from ripser import ripser
 #from scipy.spatial.distance import cdist
 from teaspoon.TDA.Distance import bottleneckDist
 
-PH_CACHE_DIR = Path("/Users/bostjan/Dropbox/Code/Lasso_PH/ph_cache")
+PH_CACHE_DIR = Path("ph_cache")
 
 def remove_nans(points: np.ndarray):
     while any(np.isnan(points[0])):

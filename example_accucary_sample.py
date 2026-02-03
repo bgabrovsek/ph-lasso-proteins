@@ -9,6 +9,8 @@ from settings import *
 
 confusion_stats = []
 
+debug_stats = []
+
 for counter, lasso in enumerate(all_lasso_iterator(include_trivial=True)):
     if counter % SKIP_EVERY != 0: continue
     if counter // SKIP_EVERY >= SAMPLE_SIZE: break
@@ -28,6 +30,18 @@ for counter, lasso in enumerate(all_lasso_iterator(include_trivial=True)):
             ignore_non_lassos=IGNORE_NON_LASSOS,
             atom_distance=9
         ))
+
+        the_lasso = lasso["id"] + " " + q
+        debug_stats.append((the_lasso, ) + confusion_stats[-1])
+
+# output data
+import csv
+with open("output.csv", mode="w", newline="", encoding="utf-8") as f:
+    writer = csv.writer(f)
+    # optional header
+    writer.writerow(["lasso", "age"])
+    # write tuple rows
+    writer.writerows(data)
 
 quality = compute_statistics_from_confusion(confusion_stats)
 print(quality)
