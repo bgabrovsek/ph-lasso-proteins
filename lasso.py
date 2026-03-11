@@ -181,6 +181,7 @@ class LassoExtractor:
                 LASSO = Lasso(self.pdb, chain, ndxes, loop, Ntail, Ctail,
                                            self.lassoprot_data[chain][bridge])
                 lassos[chain].append(LASSO)
+                print(f"Lasso {self.pdb}, {chain}, bridge={bridge} found")
             except:
                 print(f"Lasso {self.pdb}, {chain}, bridge={bridge} not found (skipping)")
         return lassos
@@ -410,10 +411,10 @@ class LassoExtractorAF(LassoExtractor):
         self.coords, self.cys_ndxes, self.chains = self.uniprot_id2coords()
         self.lassoprot_data = dict(self.get_alphalasso_info())
 
-        # print("LASSO")
-        # print(self.alphalasso_data)
-        # print(self.alphalasso_data.keys())
-        # print(self.alphalasso_data.values())
+        #print("LASSO")
+        #print(self.lassoprot_data)
+        #print(self.lassoprot_data.keys())
+        #print(self.lassoprot_data.values())
 
         self.bridges = self.find_bridges()
         self.lassos = self.get_lassos()
@@ -429,29 +430,29 @@ class LassoExtractorAF(LassoExtractor):
         # if locally file is not available, then download
 
 
-        print("uniprot_id2coords")
-        file_path_dummy = CIF_FOLDER / ('AF-' + self.pdb.upper() + "-F1-model_v4_test.cif")
-
-        print("opening.")
-        f = open(file_path_dummy, 'w')
-        print("Writings to ", file_path_dummy)
-        f.write("Hello")
-        f.close()
+#        print("uniprot_id2coords")
+#        file_path_dummy = CIF_FOLDER / ('AF-' + self.pdb.upper() + "-F1-model_v4_test.cif")
+#
+#        print("opening.")
+#        f = open(file_path_dummy, 'w')
+#        print("Writings to ", file_path_dummy)
+#        f.write("Hello")
+#        f.close()
 
 
         file_path = CIF_FOLDER / ('AF-' + self.pdb.upper() + "-F1-model_v4.cif")
-        print("File path:", file_path)
+        #print("File path:", file_path)
         if not os.path.isfile(file_path):
-            print("A")
+            #print("A")
             self.download_AF(file_path)
-            print("B")
+            #print("B")
         # if still not available, return 0
-        print("C")
+        #print("C")
         if not os.path.isfile(file_path):
             print("X")
             print(f"[[ {self.pdb.upper()} not available ]]")
             raise FileNotFoundError
-        print("Y")
+        #print("Y")
 
         chain_atoms = ["CA","C","N"]
         bridge_atoms = ["CB","SG"]
@@ -489,7 +490,7 @@ class LassoExtractorAF(LassoExtractor):
     def get_alphalasso_info(self):
         all_data = defaultdict()
         pdb_id = self.pdb.upper()
-        chain = "1"
+        chain = "A"
         #file_path = 'lassoprot_data/{}.txt'.format(self.pdb.lower())
         file_path = ALPHALASSO_FOLDER / '{}_{}.dat'.format(self.pdb.upper(), chain)
         if os.path.isfile(file_path):
@@ -504,7 +505,7 @@ class LassoExtractorAF(LassoExtractor):
             with open(file_path, 'w') as f:
                 f.write(str(dict(data)))
             # print(data)
-            all_data[chain] = data
+        all_data[chain] = data
         return all_data
 
     @staticmethod
@@ -685,7 +686,7 @@ def get_lasso(pdb, chain=None, index=None):
     return _get_lasso_dict(lasso)
 
 def _all_lasso_iterator_alphalasso(max_lassos=None, include_trivial=False, include_shallow=False, exclude_uniprot_ids = None):
-    chain = 1 # all structures in alphalasso have only on chain: "1"
+    chain = 'A' # all structures in alphalasso have only on chain: "1"
     min_plddt = 70 # minimal required plddt quality of structure
 
     #download pdb/chains
@@ -703,7 +704,7 @@ def _all_lasso_iterator_alphalasso(max_lassos=None, include_trivial=False, inclu
 
     with open(DATA_FOLDER / "lassoAF.txt", "r") as f:
         f.readline()
-        proteins = [line.strip().split('\t') for line in f.readlines()]
+        proteins = [line.strip().split() for line in f.readlines()]
 
     counter = 0
     for uniprot_id, plddt, bridge, lassotype in proteins:
@@ -717,14 +718,13 @@ def _all_lasso_iterator_alphalasso(max_lassos=None, include_trivial=False, inclu
         if float(plddt) < min_plddt:
             continue
 
-        try:
-            extractor_object = LassoExtractorAF(uniprot_id)
-        except FileNotFoundError:
-            continue
-
+        #try:
+        extractor_object = LassoExtractorAF(uniprot_id)
+        #except FileNotFoundError:
+        #    continue
         for lasso in extractor_object.lassos[chain]:
             # sometimes there is an empty lasso data ?!
-            if not bool(lasso.alphalasso_data):
+            if not bool(lasso.lassoprot_data):
                 continue
             deep_intersections = lasso.lassoprot_data["c-deep"] + lasso.lassoprot_data["n-deep"]
             shallow_intersections = lasso.lassoprot_data["c-shallow"] + lasso.lassoprot_data["n-shallow"]
