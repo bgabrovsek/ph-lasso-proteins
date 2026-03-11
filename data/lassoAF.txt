@@ -1,4 +1,5 @@
 #Uniprot	pLDDT_chain	Bridge	Lasso_type;
+Q9Y6L6  82.63   SS  LSLS4,3
 A9XK88-F1   93.27   SS  L+8N
 A0A2S6I9K1-F1   93.39   SS  L-9C
 A0A0M9WNI8-F1   94.35   SS  L+10C
