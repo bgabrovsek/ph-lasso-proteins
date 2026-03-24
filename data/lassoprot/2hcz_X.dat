@@ -1,0 +1,1 @@
+{(42, 70): {'range': (42, 70), 'symbol': 'SL1C', 'area': 297, 'n-deep': (), 'n-shallow': (), 'c-deep': (94,), 'c-shallow': ()}, (73, 140): {'range': (73, 140), 'symbol': 'SL1N', 'area': 836, 'n-deep': (58,), 'n-shallow': (), 'c-deep': (), 'c-shallow': ()}, (78, 84): {'range': (78, 84), 'symbol': 'SL0', 'area': 46, 'n-deep': (), 'n-shallow': (), 'c-deep': (), 'c-shallow': ()}}

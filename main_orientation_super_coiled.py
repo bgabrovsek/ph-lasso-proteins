@@ -130,6 +130,12 @@ def compute_orientation(
         signs.append(1 if m > 0 else (-1 if m < 0 else 0))
     return signs
 
+
+
+
+
+
+
 if __name__ == "__main__":
 
     filename = "2MGS_A-13-39.pkl.gz"
@@ -189,8 +195,37 @@ if __name__ == "__main__":
     # plt.show()
 
 
-    compute_orientation(loop_xyz=loop, tail_xyz=tailC, deep_indices=lasso["deep_c"])
+    o = compute_orientation(loop_xyz=loop, tail_xyz=tailC, deep_indices=lasso["deep_c"])
 
+
+    print("Orientation", o)
+
+    shallow_indices_n, deep_indices_n = lasso["shallow_n"], lasso["deep_n"]
+    shallow_indices_c, deep_indices_c = lasso["shallow_c"], lasso["deep_c"]
+
+    deep_xyz_n =[tailN[i] for i in deep_indices_n]
+    deep_xyz_c =[tailC[i] for i in deep_indices_c]
+
+    import matplotlib.pyplot as plt
+    from plot import draw_cost_function, draw_cost_function_temp
+
+    from math import pi
+    from principal_angle import compute_angle
+    temperature = [
+        #compute_orientation(loop_xyz=loop, tail_xyz=tailC, deep_indices=[i])[0]
+        compute_angle(loop, tailC, tail_index=i, k_loop=5, k_tail=5) / (pi/2)
+        for i in range(len(tailC))]
+
+    for i in deep_indices_c:
+        print(compute_angle(loop, tailC, tail_index=i, k_loop=5, k_tail=5) / (pi/2))
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    scatter_cost = draw_cost_function_temp(f=f_smooth, compl_f=f_bottle_c, temperature=temperature,
+                                      indices=([], deep_indices_c, maxima, None), ax=ax,
+                                      for_paper=True)
+
+    plt.show()
     exit()
 
 

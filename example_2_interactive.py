@@ -19,4 +19,4 @@ f_smooth, peaks = smoothen_and_find_peaks(f_bottle, FILTER_WINDOW_SIZE, FILTER_M
 interactive_ph_plot(lasso, ph_diagrams, "c", f_bottle, f_smooth, peaks)
 
 
-#plot_diagrams(pers, size=80, show=True)  # Plot persistence diagram
+#plot_diagrams(ph_diagrams, size=80, show=True)  # Plot persistence diagram

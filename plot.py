@@ -6,7 +6,8 @@ from matplotlib.widgets import Slider
 #from old_bottleneck import bottleneck_dist, smooth, smooth_and_threshold, find_maxima_with_ranges
 #from old_cached_ph import ph_lasso
 
-
+from matplotlib.collections import LineCollection
+from matplotlib.colors import Normalize
 
 def plot_3D_lasso(tailN, loop, tailC, deep_xyz, terminus, current_atom_index, ax):
     """Plots a 3D image of the lasso with tails, plots also deep intersections and an colors an additional atom.
@@ -100,7 +101,7 @@ def draw_cost_function(f, compl_f, indices, ax, for_paper =False):
         scatter_cost = ax.scatter(x[current_atom_index], f[current_atom_index], color="black")  # current slider position
     else:
         scatter_cost = None
-    ax.legend(loc='lower left')
+    #ax.legend(loc='lower left')
     ax.legend(legend, loc='lower left')
 
     plt.xlabel("Atom in the C-tail", fontsize=14)  # Change x-axis label size
@@ -409,6 +410,97 @@ def interactive_ph_plot(lasso,
     # register the update function with slider
     atom_slider.on_changed(update)
     plt.show()
+
+
+
+
+def draw_cost_function_temp(f, compl_f, temperature, indices, ax, for_paper=False):
+    """Plots a cost function of a PH diagram. Also draws a complementary function,
+    whose line color is given by temperature values in [-1, 1]. Marks the points
+    contained in indices.
+
+    Args:
+        f: y-values of a function
+        compl_f: y-values of a complementary function (can be None)
+        temperature: list/array of same length as compl_f, values in [-1, 1]
+                     used to color the compl_f curve from red (-1) to blue (+1)
+        indices: tuple of special indices (x's) of f:
+            - indices of shallow points, indices of deep points,
+              indices of PH intersection, current atom index
+        ax: matplotlib axis
+        for_paper: if True, only plot the colored complementary function;
+                   otherwise also plot f
+
+    Returns:
+        scatter of the current index
+    """
+    shallow_index, deep_index, ph_intersections, current_atom_index = indices
+
+    x = np.arange(len(f))
+    scatter_cost = None
+
+    if compl_f is not None:
+        compl_f = np.asarray(compl_f)
+        temperature = np.asarray(temperature)
+
+        if len(temperature) != len(compl_f):
+            raise ValueError("temperature must have the same length as compl_f")
+
+        # Build line segments for a color-mapped line
+        points = np.array([x, compl_f]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        # Use midpoint temperature for each segment
+        segment_temp = 0.5 * (temperature[:-1] + temperature[1:])
+
+        norm = Normalize(vmin=-1, vmax=1)
+        lc = LineCollection(segments, cmap="RdBu", norm=norm)
+        lc.set_array(segment_temp)
+        lc.set_linewidth(2 if for_paper else 1.5)
+        lc.set_alpha(1.0 if for_paper else 0.7)
+        ax.add_collection(lc)
+
+    if not for_paper:
+        ax.plot(x, f, color='tab:blue', label='H_0')
+
+    # plot position of "theoretical" minimal-surface intersection
+    if for_paper:
+        yref = compl_f
+    else:
+        yref = f
+
+    if shallow_index is not None:
+        ax.scatter(x[shallow_index], yref[shallow_index], color="tab:green", alpha=0.3, label="shallow")
+    if deep_index is not None:
+        ax.scatter(x[deep_index], yref[deep_index], color="tab:green", label="deep")
+    if ph_intersections is not None:
+        ax.scatter(x[ph_intersections], yref[ph_intersections], color="tab:red", label="max")
+
+    if current_atom_index is not None and not for_paper:
+        scatter_cost = ax.scatter(
+            x[current_atom_index], f[current_atom_index], color="black", label="current"
+        )
+
+    # Make sure limits include the LineCollection
+    y_all = []
+    if compl_f is not None:
+        y_all.append(np.asarray(compl_f))
+    if f is not None and not for_paper:
+        y_all.append(np.asarray(f))
+    if y_all:
+        y_all = np.concatenate(y_all)
+        ax.set_xlim(x.min(), x.max())
+        ax.set_ylim(y_all.min(), y_all.max())
+
+    ax.set_xlabel("Atom in the C-tail", fontsize=14)
+    ax.set_ylabel("Bottleneck distance", fontsize=14)
+    ax.tick_params(axis='both', labelsize=12)
+
+    handles, labels = ax.get_legend_handles_labels()
+    if handles:
+        ax.legend(loc='lower left')
+
+    return scatter_cost
 
 
 

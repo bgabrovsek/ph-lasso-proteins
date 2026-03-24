@@ -181,9 +181,10 @@ class LassoExtractor:
                 LASSO = Lasso(self.pdb, chain, ndxes, loop, Ntail, Ctail,
                                            self.lassoprot_data[chain][bridge])
                 lassos[chain].append(LASSO)
-                print(f"Lasso {self.pdb}, {chain}, bridge={bridge} found")
+                #print(f"Lasso {self.pdb}, {chain}, bridge={bridge} found")
             except:
-                print(f"Lasso {self.pdb}, {chain}, bridge={bridge} not found (skipping)")
+                pass
+                #print(f"Lasso {self.pdb}, {chain}, bridge={bridge} not found (skipping)")
         return lassos
 
     def get_expected_atoms(self, chain, chain_endpoints, bridge):
